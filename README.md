@@ -11,7 +11,7 @@ edsfod 的博客：<https://edsfod.github.io>
 ```bash
 npm install                          # 安装依赖
 npm run dev                          # 本地预览 http://localhost:4321（草稿可见）
-npm run new -- <slug> "标题"          # 新建文章（默认草稿）
+npm run new <slug> "标题"             # 新建文章（默认草稿）
 npm run check                        # 类型与元数据检查
 npm run build                        # 构建到 dist/ 并生成搜索索引
 npm run preview                      # 预览构建结果（含搜索）

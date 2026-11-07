@@ -95,7 +95,7 @@ ai:
 新建文章：
 
 ```bash
-npm run new -- <slug> "标题"
+npm run new <slug> "标题"
 ```
 
 会自动填好精确到秒的发布时间。生成的 `src/content/posts/<slug>/index.md` 默认是草稿（`draft: true`），删掉这一行即发布。文章开头的字段：

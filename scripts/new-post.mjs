@@ -1,5 +1,5 @@
-// 新建文章：npm run new -- <slug> [标题]
-// 例：npm run new -- weight-space-programming "权重空间编程"
+// 新建文章：npm run new <slug> [标题]
+// 例：npm run new weight-space-programming "权重空间编程"
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -7,7 +7,7 @@ const [slug, ...titleParts] = process.argv.slice(2);
 const title = titleParts.join(' ') || slug;
 
 if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-  console.error('用法：npm run new -- <slug> [标题]\nslug 只能包含小写字母、数字和连字符，例如 my-first-post');
+  console.error('用法：npm run new <slug> [标题]\nslug 只能包含小写字母、数字和连字符，例如 my-first-post');
   process.exit(1);
 }
 
