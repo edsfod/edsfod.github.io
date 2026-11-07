@@ -1,0 +1,44 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getPosts, groupByTag, tagSlug } from '../../lib/posts';
+import { t } from '../../i18n/ui';
+
+const tags = groupByTag(await getPosts());
+---
+
+<Base title={t['tags.title']}>
+  <div class="container">
+    <h1 class="page-title">{t['tags.title']}</h1>
+    <p class="meta">{tags.length} 个标签</p>
+    <ul class="cloud">
+      {
+        tags.map(([tag, list]) => (
+          <li>
+            <a class="tag" href={`/tags/${tagSlug(tag)}/`}>
+              #{tag} <span>{list.length}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</Base>
+
+<style>
+  .cloud {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .tag {
+    font-size: 0.9375rem;
+    padding: 0.15em 0.75em;
+  }
+  span {
+    color: var(--fg-faint);
+    font-size: 0.8125rem;
+  }
+</style>

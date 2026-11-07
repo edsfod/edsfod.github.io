@@ -1,0 +1,26 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostList from '../../components/PostList.astro';
+import { getPosts, groupByTag, tagSlug, type Post } from '../../lib/posts';
+import { t } from '../../i18n/ui';
+
+export async function getStaticPaths() {
+  const tags = groupByTag(await getPosts());
+  return tags.map(([tag, posts]) => ({ params: { tag: tagSlug(tag) }, props: { tag, posts } }));
+}
+
+interface Props {
+  tag: string;
+  posts: Post[];
+}
+const { tag, posts } = Astro.props;
+---
+
+<Base title={`#${tag}`}>
+  <div class="container">
+    <p class="meta"><a href="/tags/">{t['tags.title']}</a></p>
+    <h1 class="page-title">#{tag}</h1>
+    <p class="meta">{t['archive.count'](posts.length)}</p>
+    <PostList posts={posts} />
+  </div>
+</Base>

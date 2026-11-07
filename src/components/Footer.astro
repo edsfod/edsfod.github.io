@@ -1,0 +1,42 @@
+---
+import { site } from '../site.config';
+import { t } from '../i18n/ui';
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container meta">
+    <p>
+      <span>© {year} <a href={site.github}>{site.author}</a></span>
+      <span>{t['footer.content']}采用 <a href={site.license.url} rel="license">{site.license.name}</a></span>
+      <span>{t['footer.code']}采用 <a href={`${site.repo}/blob/main/LICENSE`}>MIT</a></span>
+      <span><a href={site.repo}>源码</a></span>
+    </p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--border);
+    padding-block: 1.5rem;
+  }
+  p {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.5em;
+  }
+  span + span::before {
+    content: '·';
+    margin-right: 0.5em;
+  }
+  a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--border);
+    text-underline-offset: 0.2em;
+  }
+  a:hover {
+    color: var(--accent);
+  }
+</style>

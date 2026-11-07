@@ -1,0 +1,13 @@
+---
+import { dayKey, secondKey } from '../lib/posts';
+
+interface Props {
+  date: Date;
+  /** 精确到秒（文章页）；否则只显示日期（列表），悬停可见完整时间 */
+  precise?: boolean;
+}
+const { date, precise = false } = Astro.props;
+const full = `${secondKey(date)}（UTC+8）`;
+---
+
+<time datetime={date.toISOString()} title={full}>{precise ? secondKey(date) : dayKey(date)}</time>

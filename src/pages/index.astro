@@ -1,0 +1,94 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import PostList from '../components/PostList.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import { getPosts, updatedOf } from '../lib/posts';
+import { site } from '../site.config';
+import { t } from '../i18n/ui';
+
+const posts = await getPosts();
+const pages = await getCollection('pages');
+
+// 置顶：独立页面（如“关于”）与文章都可以 pinned: true
+const pinned = [
+  ...pages.filter((p) => p.data.pinned).map((p) => ({ href: `/${p.id}/`, entry: p })),
+  ...posts.filter((p) => p.data.pinned).map((p) => ({ href: `/posts/${p.id}/`, entry: p })),
+];
+const recent = posts.filter((p) => !p.data.pinned).slice(0, site.recentCount);
+---
+
+<Base>
+  <div class="container">
+    {
+      pinned.length > 0 && (
+        <section>
+          <h2 class="section-title">{t['home.pinned']}</h2>
+          <ul class="pinned">
+            {pinned.map(({ href, entry }) => {
+              const updated = updatedOf(entry);
+              return (
+                <li>
+                  <a href={href}>{entry.data.title}</a>
+                  {entry.data.description && <p class="desc">{entry.data.description}</p>}
+                  <p class="meta">
+                    {updated ? (
+                      <>
+                        {t['post.updated']} <FormattedDate date={updated} precise />
+                      </>
+                    ) : (
+                      <FormattedDate date={entry.data.published} precise />
+                    )}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )
+    }
+
+    <section>
+      <h2 class="section-title">{t['home.recent']}</h2>
+      {recent.length > 0 ? <PostList posts={recent} /> : <p class="meta">{t['home.empty']}</p>}
+      {posts.length > recent.length + pinned.length && <p class="more"><a href="/archive/">{t['home.more']}</a></p>}
+    </section>
+  </div>
+</Base>
+
+<style>
+  section:first-child .section-title {
+    margin-top: 0.5rem;
+  }
+  .pinned {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .pinned li {
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .pinned a {
+    font-weight: 600;
+    font-size: 1.0625rem;
+    color: var(--fg);
+  }
+  .pinned a:hover {
+    color: var(--accent);
+  }
+  .pinned p {
+    margin: 0.2rem 0 0;
+  }
+  .desc {
+    color: var(--fg-soft);
+    font-size: 0.9375rem;
+  }
+  .more {
+    margin-top: 1rem;
+    font-size: 0.9375rem;
+  }
+</style>

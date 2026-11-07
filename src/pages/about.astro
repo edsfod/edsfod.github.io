@@ -1,0 +1,12 @@
+---
+import { getEntry, render } from 'astro:content';
+import Article from '../layouts/Article.astro';
+
+const entry = await getEntry('pages', 'about');
+if (!entry) throw new Error('缺少 src/content/pages/about.md');
+const { Content, headings } = await render(entry);
+---
+
+<Article entry={entry} headings={headings}>
+  <Content />
+</Article>

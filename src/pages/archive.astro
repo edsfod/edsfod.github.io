@@ -1,0 +1,41 @@
+---
+import Base from '../layouts/Base.astro';
+import PostList from '../components/PostList.astro';
+import { getPosts, yearOf, type Post } from '../lib/posts';
+import { t } from '../i18n/ui';
+
+const posts = await getPosts();
+const years = new Map<string, Post[]>();
+for (const p of posts) {
+  const y = yearOf(p.data.published);
+  years.set(y, [...(years.get(y) ?? []), p]);
+}
+---
+
+<Base title={t['archive.title']}>
+  <div class="container">
+    <h1 class="page-title">{t['archive.title']}</h1>
+    <p class="meta">{t['archive.count'](posts.length)}</p>
+    {
+      [...years].map(([year, list]) => (
+        <section>
+          <h2 class="year" id={`y${year}`}>
+            {year} <span class="meta">{list.length}</span>
+          </h2>
+          <PostList posts={list} />
+        </section>
+      ))
+    }
+  </div>
+</Base>
+
+<style>
+  .year {
+    font-size: 1.25rem;
+    margin: 2rem 0 0.5rem;
+  }
+  .year .meta {
+    font-weight: 400;
+    margin-left: 0.25rem;
+  }
+</style>

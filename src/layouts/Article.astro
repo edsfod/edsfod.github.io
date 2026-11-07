@@ -1,0 +1,337 @@
+---
+import 'katex/dist/katex.min.css'; // 字体只在页面真正出现公式时才会下载
+import type { MarkdownHeading } from 'astro';
+import type { CollectionEntry } from 'astro:content';
+import Base from './Base.astro';
+import Toc from '../components/Toc.astro';
+import Giscus from '../components/Giscus.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import { t } from '../i18n/ui';
+import { site } from '../site.config';
+import { readingMinutes, tagSlug, updatedOf, type Page, type Post } from '../lib/posts';
+
+type Link = { href: string; title: string };
+
+interface Props {
+  entry: Post | Page;
+  headings: MarkdownHeading[];
+  words?: number;
+  series?: { entry: CollectionEntry<'series'>; index: number; total: number };
+  prev?: Link;
+  next?: Link;
+  from?: Post[];
+  backlinks?: Post[];
+  comments?: boolean;
+  /** 文章页显示许可声明与字数；独立页面不显示 */
+  isPost?: boolean;
+}
+
+const { entry, headings, words, series, prev, next, from = [], backlinks = [], comments = true, isPost = false } = Astro.props;
+const data = entry.data;
+const post = isPost ? (entry as Post).data : undefined;
+const updated = updatedOf(entry);
+const ai = data.ai;
+const models = ai?.model ? [ai.model].flat().join('、') : undefined;
+---
+
+<Base title={data.title} description={data.description} type="article" published={data.published} updated={updated}>
+  <div class="article-grid">
+    <header class="head" data-pagefind-body>
+      {
+        series && (
+          <p class="series-banner meta">
+            {t['post.series']}<a href={`/series/${series.entry.id}/`}>《{series.entry.data.title}》</a>·{' '}
+            {t['post.seriesPart'](series.index, series.total)}
+          </p>
+        )
+      }
+      <h1 class="page-title">{data.title}</h1>
+      <p class="meta">
+        <span>{t['post.published']} <FormattedDate date={data.published} precise /></span>
+        {
+          updated && (
+            <span>
+              · {t['post.updated']} <FormattedDate date={updated} precise />
+            </span>
+          )
+        }
+        {
+          isPost && words !== undefined && (
+            <span>
+              · {words} {t['post.words']} · {readingMinutes(words)} {t['post.minutes']}
+            </span>
+          )
+        }
+        {post?.draft && <span>· {t['post.draft']}</span>}
+      </p>
+      {
+        post && post.tags.length > 0 && (
+          <p class="tags">
+            {post.tags.map((tag) => (
+              <a class="tag" href={`/tags/${tagSlug(tag)}/`}>
+                #{tag}
+              </a>
+            ))}
+          </p>
+        )
+      }
+      {
+        ai && (
+          <div class="notice notice--ai" role="note">
+            <p>
+              {ai.note ?? t['post.ai.default']}
+              {models && <>{`${t['post.ai.model']}：${models}。`}</>}
+            </p>
+          </div>
+        )
+      }
+      {
+        data.living && (
+          <div class="notice" role="note">
+            <p>{t['post.living']}</p>
+          </div>
+        )
+      }
+    </header>
+
+    <aside class="toc-col" data-pagefind-ignore>
+      <div class="toc-sticky">
+        <Toc headings={headings} />
+        <button type="button" class="to-top" data-to-top hidden>↑ {t['toTop']}</button>
+      </div>
+    </aside>
+
+    <div class="body">
+      <div class="prose" data-pagefind-body>
+        <slot />
+      </div>
+
+      {
+        from.length > 0 && (
+          <section class="relations">
+            <h2 class="section-title">{t['post.from']}</h2>
+            <ul>
+              {from.map((p) => (
+                <li>
+                  <a href={`/posts/${p.id}/`}>{p.data.title}</a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+      {
+        backlinks.length > 0 && (
+          <section class="relations">
+            <h2 class="section-title">{t['post.backlinks']}</h2>
+            <ul>
+              {backlinks.map((p) => (
+                <li>
+                  <a href={`/posts/${p.id}/`}>{p.data.title}</a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+
+      {
+        isPost && (
+          <p class="license meta">
+            {t['post.license.prefix']}
+            <a href={site.license.url} rel="license">
+              {site.license.name}
+            </a>
+            {t['post.license.suffix']}
+          </p>
+        )
+      }
+
+      {
+        (prev || next) && (
+          <nav class="pager" aria-label="翻页">
+            {prev ? (
+              <a href={prev.href} rel="prev">
+                <small>← {t['post.prev']}</small>
+                {prev.title}
+              </a>
+            ) : (
+              <span />
+            )}
+            {next ? (
+              <a href={next.href} rel="next" class="next">
+                <small>{t['post.next']} →</small>
+                {next.title}
+              </a>
+            ) : (
+              <span />
+            )}
+          </nav>
+        )
+      }
+
+      {comments && <Giscus />}
+    </div>
+  </div>
+</Base>
+
+<script>
+  import { t } from '../i18n/ui';
+
+  // 标题锚点：悬停显示 #，点击得到可分享的链接
+  document.querySelectorAll<HTMLElement>('.prose :is(h2, h3, h4)[id]').forEach((h) => {
+    const a = document.createElement('a');
+    a.className = 'heading-anchor';
+    a.href = `#${h.id}`;
+    a.textContent = '#';
+    a.setAttribute('aria-label', `链接到“${h.textContent}”`);
+    h.appendChild(a);
+  });
+
+  // 回到顶部：向下滚动超过一屏后出现
+  const toTop = document.querySelector<HTMLButtonElement>('[data-to-top]');
+  if (toTop) {
+    const sync = () => (toTop.hidden = scrollY < innerHeight);
+    addEventListener('scroll', sync, { passive: true });
+    sync();
+    toTop.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
+  }
+
+  // 代码块复制按钮
+  document.querySelectorAll<HTMLPreElement>('.prose pre').forEach((pre) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-btn';
+    btn.textContent = t['code.copy'];
+    btn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(pre.querySelector('code')?.innerText ?? pre.innerText);
+      btn.textContent = t['code.copied'];
+      setTimeout(() => (btn.textContent = t['code.copy']), 1500);
+    });
+    pre.appendChild(btn);
+  });
+</script>
+
+<style>
+  .article-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'head' 'toc' 'body';
+    width: min(100% - 2.5rem, var(--measure));
+    margin-inline: auto;
+  }
+  .head {
+    grid-area: head;
+    margin-bottom: 1.5rem;
+  }
+  .toc-col {
+    grid-area: toc;
+  }
+  .toc-col :global(.toc) {
+    margin-bottom: 1.5rem;
+  }
+  .to-top {
+    display: none;
+  }
+  .body {
+    grid-area: body;
+    min-width: 0;
+  }
+  /* 电脑（主要阅读场景）：正文居中，目录与“回到顶部”固定在右侧留白里 */
+  @media (min-width: 1100px) {
+    .article-grid {
+      width: 100%;
+      grid-template-columns: 1fr minmax(0, var(--measure)) 1fr;
+      grid-template-areas: '. head .' '. body toc';
+      column-gap: 2.5rem;
+    }
+    .toc-sticky {
+      position: sticky;
+      top: 2rem;
+      max-width: var(--toc-width);
+      max-height: calc(100vh - 4rem);
+      overflow-y: auto;
+    }
+    .to-top {
+      display: block;
+      margin-top: 0.5rem;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      font-size: 0.875rem;
+      color: var(--fg-faint);
+      cursor: pointer;
+    }
+    .to-top:hover {
+      color: var(--accent);
+    }
+    .to-top[hidden] {
+      display: none;
+    }
+    .toc-col :global(summary) {
+      pointer-events: none;
+      list-style: none;
+    }
+    .toc-col :global(summary::-webkit-details-marker) {
+      display: none;
+    }
+  }
+  .series-banner {
+    margin: 0 0 0.5rem;
+  }
+  .series-banner a {
+    color: var(--fg-soft);
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.5rem 0 0;
+  }
+  .meta span + span {
+    margin-left: 0.25em;
+  }
+  .head .meta {
+    margin: 0;
+  }
+  .relations ul {
+    margin: 0;
+    padding-left: 1.2em;
+  }
+  .license {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .pager {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  .pager a {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--fg);
+    line-height: 1.5;
+  }
+  .pager a:hover {
+    border-color: var(--accent);
+    text-decoration: none;
+  }
+  .pager small {
+    color: var(--fg-faint);
+  }
+  .pager .next {
+    text-align: right;
+  }
+  @media (max-width: 560px) {
+    .pager {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,53 @@
+---
+import { site } from '../site.config';
+import { t } from '../i18n/ui';
+const { repo, repoId, category, categoryId } = site.giscus;
+const enabled = Boolean(repoId && categoryId);
+---
+
+{
+  enabled && (
+    <section class="comments" aria-label={t['post.comments']}>
+      <h2 class="section-title">{t['post.comments']}</h2>
+      <div class="giscus" data-repo={repo} data-repo-id={repoId} data-category={category} data-category-id={categoryId} />
+    </section>
+  )
+}
+
+<script>
+  // 评论区按主题加载，并跟随站点主题切换
+  const host = document.querySelector<HTMLElement>('.giscus');
+  if (host) {
+    const theme = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    const s = document.createElement('script');
+    s.src = 'https://giscus.app/client.js';
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    Object.entries({
+      repo: host.dataset.repo!,
+      repoId: host.dataset.repoId!,
+      category: host.dataset.category!,
+      categoryId: host.dataset.categoryId!,
+      mapping: 'pathname', // 按网址对应文章：所以 slug 不要改
+      strict: '1',
+      reactionsEnabled: '1',
+      emitMetadata: '0',
+      inputPosition: 'top',
+      theme: theme(),
+      lang: 'zh-CN',
+      loading: 'lazy',
+    }).forEach(([k, v]) => s.setAttribute(`data-${k.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase())}`, v));
+    host.appendChild(s);
+
+    addEventListener('themechange', () => {
+      const frame = document.querySelector<HTMLIFrameElement>('iframe.giscus-frame');
+      frame?.contentWindow?.postMessage({ giscus: { setConfig: { theme: theme() } } }, 'https://giscus.app');
+    });
+  }
+</script>
+
+<style>
+  .comments {
+    margin-top: 3rem;
+  }
+</style>

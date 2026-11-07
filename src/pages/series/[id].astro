@@ -1,0 +1,41 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import PostList from '../../components/PostList.astro';
+import { getPosts, postsInSeries, type Post } from '../../lib/posts';
+import { t } from '../../i18n/ui';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  const series = await getCollection('series');
+  return series
+    .map((s) => ({ params: { id: s.id }, props: { s, posts: postsInSeries(posts, s.id) } }))
+    .filter(({ props }) => props.posts.length > 0); // 只有草稿的专栏不上线
+}
+
+interface Props {
+  s: CollectionEntry<'series'>;
+  posts: Post[];
+}
+const { s, posts } = Astro.props;
+const { Content } = await render(s);
+---
+
+<Base title={s.data.title} description={s.data.description}>
+  <div class="container">
+    <p class="meta"><a href="/series/">{t['series.title']}</a></p>
+    <h1 class="page-title">{s.data.title}</h1>
+    <p class="meta">{posts.length} 篇 · {t[`series.status.${s.data.status}`]}</p>
+    <div class="prose intro"><Content /></div>
+    <PostList posts={posts} numbered />
+  </div>
+</Base>
+
+<style>
+  .intro {
+    margin: 1rem 0 1.5rem;
+  }
+  .intro:empty {
+    display: none;
+  }
+</style>

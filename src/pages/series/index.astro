@@ -1,0 +1,60 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { getPosts, postsInSeries } from '../../lib/posts';
+import { t } from '../../i18n/ui';
+
+const posts = await getPosts();
+const series = (await getCollection('series'))
+  .map((s) => ({ s, count: postsInSeries(posts, s.id).length }))
+  .filter(({ count }) => count > 0) // 只有草稿的专栏不上线
+  .sort((a, b) => b.count - a.count);
+---
+
+<Base title={t['series.title']}>
+  <div class="container">
+    <h1 class="page-title">{t['series.title']}</h1>
+    {series.length === 0 && <p class="meta">{t['series.empty']}</p>}
+    <ul class="series">
+      {
+        series.map(({ s, count }) => (
+          <li>
+            <a href={`/series/${s.id}/`}>{s.data.title}</a>
+            <span class="meta">
+              {' '}
+              · {count} 篇 · {t[`series.status.${s.data.status}`]}
+            </span>
+            {s.data.description && <p>{s.data.description}</p>}
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</Base>
+
+<style>
+  .series {
+    list-style: none;
+    margin: 1.5rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  li {
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  a {
+    font-weight: 600;
+    color: var(--fg);
+  }
+  a:hover {
+    color: var(--accent);
+  }
+  p {
+    margin: 0.25rem 0 0;
+    color: var(--fg-soft);
+    font-size: 0.9375rem;
+  }
+</style>

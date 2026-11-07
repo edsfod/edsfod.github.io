@@ -1,0 +1,82 @@
+---
+import type { MarkdownHeading } from 'astro';
+import { t } from '../i18n/ui';
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+const headings = Astro.props.headings.filter((h) => h.depth >= 2 && h.depth <= 3 && h.slug !== 'footnote-label');
+---
+
+{
+  headings.length >= 2 && (
+    <nav class="toc" aria-label={t['post.toc']}>
+      <details open>
+        <summary>{t['post.toc']}</summary>
+        <ol>
+          {headings.map((h) => (
+            <li class={`d${h.depth}`}>
+              <a href={`#${h.slug}`}>{h.text}</a>
+            </li>
+          ))}
+        </ol>
+      </details>
+    </nav>
+  )
+}
+
+<script>
+  // 高亮当前阅读到的章节
+  const links = new Map<string, HTMLAnchorElement>();
+  document.querySelectorAll<HTMLAnchorElement>('.toc a').forEach((a) => links.set(decodeURIComponent(a.hash.slice(1)), a));
+  if (links.size) {
+    const headings = [...links.keys()].map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    const update = () => {
+      let current = headings[0];
+      for (const h of headings) if (h.getBoundingClientRect().top < 120) current = h;
+      links.forEach((a) => a.removeAttribute('aria-current'));
+      links.get(current.id)?.setAttribute('aria-current', 'true');
+    };
+    addEventListener('scroll', update, { passive: true });
+    update();
+  }
+</script>
+
+<style>
+  .toc {
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--fg-soft);
+    margin-bottom: 0.4rem;
+  }
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    padding: 0.15rem 0;
+  }
+  .d3 {
+    padding-left: 1em;
+  }
+  a {
+    display: block;
+    color: var(--fg-soft);
+    border-left: 2px solid transparent;
+    padding-left: 0.6rem;
+    margin-left: -0.6rem;
+  }
+  a:hover {
+    color: var(--fg);
+    text-decoration: none;
+  }
+  a[aria-current='true'] {
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+</style>
