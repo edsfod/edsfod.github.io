@@ -20,8 +20,8 @@ export const site = {
   // giscus 评论：https://giscus.app 生成。repoId / categoryId 为空时不渲染评论区。
   giscus: {
     repo: 'edsfod/edsfod.github.io',
-    repoId: '',
+    repoId: 'R_kgDOVl-G_A',
     category: 'Announcements',
-    categoryId: '',
+    categoryId: 'DIC_kwDOVl-G_M4DKk0e',
   },
 } as const;
