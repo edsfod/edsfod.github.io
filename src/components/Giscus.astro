@@ -7,7 +7,7 @@ const enabled = Boolean(repoId && categoryId);
 
 {
   enabled && (
-    <section class="comments" aria-label={t['post.comments']}>
+    <section class="comments" id="comments" aria-label={t['post.comments']}>
       <h2 class="section-title">{t['post.comments']}</h2>
       <div class="giscus" data-repo={repo} data-repo-id={repoId} data-category={category} data-category-id={categoryId} />
     </section>

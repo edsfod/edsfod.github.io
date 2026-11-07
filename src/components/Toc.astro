@@ -5,11 +5,14 @@ import { t } from '../i18n/ui';
 
 interface Props {
   headings: MarkdownHeading[];
-  /** sidebar：右侧栏，带详细程度切换；inline：窄屏时放在正文上方 */
-  variant?: 'sidebar' | 'inline';
+  /** side：右侧栏，带详细程度切换；inline：窄屏时放在正文上方 */
+  variant?: 'side' | 'inline';
+  /** 追加在目录末尾的一级条目，例如评论区 */
+  extra?: { slug: string; text: string }[];
 }
-const { variant = 'sidebar' } = Astro.props;
+const { variant = 'side', extra = [] } = Astro.props;
 const headings = Astro.props.headings.filter((h) => h.depth >= 2 && h.depth <= 4 && h.slug !== 'footnote-label');
+const items = [...headings, ...extra.map((e) => ({ depth: 2, slug: e.slug, text: e.text, extra: true }))];
 const maxDepth = Math.max(2, ...headings.map((h) => h.depth));
 const levels = [
   { depth: 2, label: '简略' },
@@ -19,9 +22,9 @@ const levels = [
 ---
 
 {
-  headings.length > 0 && (
-    <nav class:list={['toc', variant]} aria-label={t['post.toc']}>
-      {variant === 'sidebar' ? (
+  items.length > 0 && (
+    <nav class:list={['toc', `toc--${variant}`]} aria-label={t['post.toc']}>
+      {variant === 'side' ? (
         <>
           {levels.length > 1 && (
             <div class="levels" role="radiogroup" aria-label="目录详细程度">
@@ -33,8 +36,8 @@ const levels = [
             </div>
           )}
           <ol>
-            {headings.map((h) => (
-              <li class={`d${h.depth}`}>
+            {items.map((h) => (
+              <li class:list={[`d${h.depth}`, { extra: 'extra' in h }]} data-depth={h.depth}>
                 <a href={`#${h.slug}`}>{h.text}</a>
               </li>
             ))}
@@ -44,8 +47,8 @@ const levels = [
         <details>
           <summary>{t['post.toc']}</summary>
           <ol>
-            {headings.map((h) => (
-              <li class={`d${h.depth}`}>
+            {items.map((h) => (
+              <li class:list={[`d${h.depth}`, { extra: 'extra' in h }]} data-depth={h.depth}>
                 <a href={`#${h.slug}`}>{h.text}</a>
               </li>
             ))}
@@ -77,14 +80,14 @@ const levels = [
 
   // 高亮当前阅读到的章节（各层级都会高亮，隐藏层级时其上级仍高亮）
   const anchors = [...document.querySelectorAll<HTMLAnchorElement>('.toc a')];
-  const ids = [...new Set(anchors.map((a) => decodeURIComponent(a.hash.slice(1))))];
-  const headings = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+  const depthById = new Map(anchors.map((a) => [decodeURIComponent(a.hash.slice(1)), Number(a.parentElement?.dataset.depth ?? 2)]));
+  const headings = [...depthById.keys()].map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
   if (headings.length) {
-    const depthOf = (h: HTMLElement) => Number(h.tagName.slice(1));
+    const depthOf = (h: HTMLElement) => depthById.get(h.id) ?? 2;
     const update = () => {
       let idx = 0;
       headings.forEach((h, i) => {
-        if (h.getBoundingClientRect().top < 120) idx = i;
+        if (h.getBoundingClientRect().top < innerHeight * 0.3) idx = i;
       });
       // 当前标题及其各级祖先
       const active = new Set<string>();
@@ -129,8 +132,8 @@ const levels = [
     font-size: 0.95em;
   }
   /* 按详细程度隐藏更深的层级 */
-  :global(:root[data-toc='2']) .sidebar :is(.d3, .d4),
-  :global(:root[data-toc='3']) .sidebar .d4 {
+  :global(:root[data-toc='2']) .toc--side :is(.d3, .d4),
+  :global(:root[data-toc='3']) .toc--side .d4 {
     display: none;
   }
   a {
@@ -151,9 +154,19 @@ const levels = [
     border-left-color: var(--accent);
   }
   /* 隐藏层级里的当前标题不可见时，让其上级显示强调色 */
-  :global(:root[data-toc='2']) .sidebar .d2 a.ancestor,
-  :global(:root[data-toc='3']) .sidebar :is(.d2, .d3) a.ancestor {
+  :global(:root[data-toc='2']) .toc--side .d2 a.ancestor,
+  :global(:root[data-toc='3']) .toc--side :is(.d2, .d3) a.ancestor {
     border-left-color: var(--border);
+  }
+  /* 评论等追加条目：与标题之间留一道分隔 */
+  li.extra {
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
+    border-top: 1px dashed var(--border);
+  }
+  li.extra + li.extra {
+    margin-top: 0;
+    border-top: 0;
   }
   .levels {
     display: inline-flex;
@@ -179,7 +192,7 @@ const levels = [
     color: var(--fg);
     font-weight: 600;
   }
-  .inline summary {
+  .toc--inline summary {
     cursor: pointer;
     font-weight: 600;
     color: var(--fg-soft);

@@ -33,13 +33,16 @@ const updated = updatedOf(entry);
 const ai = data.ai;
 const models = ai?.model ? [ai.model].flat().join('、') : undefined;
 const tocHeadings = headings.filter((h) => h.depth >= 2 && h.depth <= 4 && h.slug !== 'footnote-label');
+// 评论区也放进目录，便于从右侧栏直接跳转
+const showComments = comments && Boolean(site.giscus.repoId && site.giscus.categoryId);
+const tocExtra = showComments ? [{ slug: 'comments', text: t['post.comments'] }] : [];
 ---
 
 <Base title={data.title} description={data.description} type="article" published={data.published} updated={updated}>
   {
-    tocHeadings.length > 0 && (
+    tocHeadings.length + tocExtra.length > 0 && (
       <Fragment slot="right">
-        <Toc headings={headings} />
+        <Toc headings={headings} extra={tocExtra} />
         <div class="sidebar-foot">
           <div class="progress" aria-hidden="true">
             <span data-progress-bar />
@@ -116,7 +119,7 @@ const tocHeadings = headings.filter((h) => h.depth >= 2 && h.depth <= 4 && h.slu
     </header>
 
     <div class="toc-inline" data-pagefind-ignore>
-      <Toc headings={headings} variant="inline" />
+      <Toc headings={headings} variant="inline" extra={tocExtra} />
     </div>
 
     <div class="body">
@@ -255,8 +258,6 @@ const tocHeadings = headings.filter((h) => h.depth >= 2 && h.depth <= 4 && h.slu
   }
   /* 右侧栏底部：阅读进度与回到顶部 */
   .sidebar-foot {
-    position: sticky;
-    bottom: 0;
     margin-top: 1rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--border);

@@ -56,19 +56,19 @@ const hasRight = Astro.slots.has('right');
         const ls = localStorage;
         const saved = ls.getItem('theme');
         d.theme = (saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-        // 窗口较窄时左栏默认折叠；手动操作过则记住
-        d.left = ls.getItem('sidebarLeft') ?? (innerWidth < 1280 ? 'closed' : 'open');
+        // 默认：左栏折叠、右栏展开；手动操作过则记住
+        d.left = ls.getItem('sidebarLeft') ?? 'closed';
         d.right = ls.getItem('sidebarRight') ?? 'open';
         d.toc = ls.getItem('tocLevel') ?? '3';
       })();
     </script>
     <slot name="head" />
   </head>
-  <body>
+  <body class:list={[{ 'has-right': hasRight }]}>
     <a class="skip-link" href="#main">跳到正文</a>
     <Header />
 
-    <div class:list={['shell', { 'has-right': hasRight }]}>
+    <div class="shell">
       <aside class="sidebar sidebar-left" aria-label="站点导航">
         <div class="sidebar-head">
           <span>导航</span>

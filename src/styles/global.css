@@ -21,24 +21,25 @@
   --fg-faint: #8b949e;
   --border: #e3e3e0;
   --accent: #b5452b;
-  --accent-soft: #fbeee9;
+  --accent-soft: color-mix(in srgb, #b5452b 8%, #fdfdfc);
   --code-bg: #f6f6f4;
   --mark: #fff3b0;
 
   color-scheme: light;
 }
 
+/* 深色：中性偏冷的灰底，正文不用纯白以减少眩光；强调色降低饱和度，浅底用半透明叠加而不是实色棕 */
 :root[data-theme='dark'] {
-  --bg: #16181c;
-  --bg-soft: #1e2126;
-  --fg: #e3e5e8;
-  --fg-soft: #a5acb5;
-  --fg-faint: #6e7681;
-  --border: #2d3138;
-  --accent: #f08d6e;
-  --accent-soft: #3a2620;
-  --code-bg: #1e2126;
-  --mark: #5c4b00;
+  --bg: #1a1b1e;
+  --bg-soft: #232428;
+  --fg: #d6d8dc;
+  --fg-soft: #9a9fa7;
+  --fg-faint: #676c74;
+  --border: #2e3035;
+  --accent: #d99178;
+  --accent-soft: color-mix(in srgb, #d99178 10%, #1a1b1e);
+  --code-bg: #212226;
+  --mark: #4a3f12;
 
   color-scheme: dark;
 }
@@ -136,19 +137,18 @@ mark {
 }
 
 @media (min-width: 1100px) {
-  .shell {
-    display: grid;
-    grid-template-columns: var(--left-w) minmax(0, 1fr) 0;
-    transition: grid-template-columns 0.2s ease;
-  }
-  .shell.has-right {
-    grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
-  }
-  :root[data-left='closed'] .shell {
+  /* 侧栏实际占用的宽度：页头与正文栏都据此对齐 */
+  :root[data-left='closed'] {
     --left-w: 0px;
   }
-  :root[data-right='closed'] .shell {
+  :root[data-right='closed'],
+  body:not(.has-right) {
     --right-w: 0px;
+  }
+  .shell {
+    display: grid;
+    grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
+    transition: grid-template-columns 0.2s ease;
   }
 
   .container {
@@ -156,15 +156,34 @@ mark {
   }
 
   .sidebar {
-    display: block;
+    display: flex;
+    flex-direction: column;
     position: sticky;
     top: var(--header-h);
     height: calc(100vh - var(--header-h));
+    padding: 0.75rem 1.1rem 1rem;
+    min-width: 0;
+    overflow: hidden;
+  }
+  /* 可滚动区域：左栏的导航、右栏的目录。滚动条平时隐藏，悬停时才显示 */
+  .sidebar-left > .left-nav,
+  .sidebar-right > .toc {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0.75rem 1.1rem 2rem;
     scrollbar-width: thin;
-    min-width: 0;
+    scrollbar-color: transparent transparent;
+    margin-inline: -0.5rem;
+    padding-inline: 0.5rem;
+  }
+  .sidebar-left > .left-nav:hover,
+  .sidebar-right > .toc:hover {
+    scrollbar-color: var(--border) transparent;
+  }
+  .sidebar-head,
+  .sidebar-right > .sidebar-foot {
+    flex: none;
   }
   .sidebar-left {
     border-right: 1px solid var(--border);
