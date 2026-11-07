@@ -28,17 +28,18 @@
   color-scheme: light;
 }
 
-/* 深色：中性偏冷的灰底，正文不用纯白以减少眩光；强调色降低饱和度，浅底用半透明叠加而不是实色棕 */
+/* 深色：中性深灰（不偏冷也不偏暖），正文不用纯白以减少眩光；强调色降低饱和度，浅底用半透明叠加
+   其他备选方案见桌面“博客深色配色”文件夹 */
 :root[data-theme='dark'] {
-  --bg: #1a1b1e;
-  --bg-soft: #232428;
-  --fg: #d6d8dc;
-  --fg-soft: #9a9fa7;
-  --fg-faint: #676c74;
-  --border: #2e3035;
-  --accent: #d99178;
-  --accent-soft: color-mix(in srgb, #d99178 10%, #1a1b1e);
-  --code-bg: #212226;
+  --bg: #191919;
+  --bg-soft: #222222;
+  --fg: #d6d6d6;
+  --fg-soft: #9b9b9b;
+  --fg-faint: #6a6a6a;
+  --border: #2f2f2f;
+  --accent: #df8f70;
+  --accent-soft: color-mix(in srgb, #df8f70 11%, #191919);
+  --code-bg: #202020;
   --mark: #4a3f12;
 
   color-scheme: dark;
