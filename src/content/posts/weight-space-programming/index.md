@@ -1,5 +1,5 @@
 ---
-title: "权重空间编程"是平凡的
+title: '"权重空间编程"是平凡的'
 description: 拆开 Sparks of Weight-Space Programming 的实验条件，看 LLM 直接改权重时到底在做什么。
 published: 2026-11-07T15:39:13+08:00
 tags: [LLM, 机械可解释性]
