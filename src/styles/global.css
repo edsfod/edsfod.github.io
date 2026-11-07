@@ -354,6 +354,9 @@ main {
 }
 .prose h3 {
   font-size: 1.125rem;
+  /* 二级标题下是通栏线，三级标题下是半栏线 */
+  padding-bottom: 0.3em;
+  background: linear-gradient(var(--border), var(--border)) left bottom / 50% 1px no-repeat;
 }
 .prose h4 {
   font-size: 1.0625rem;
