@@ -66,9 +66,25 @@ const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWit
   .site-header {
     border-bottom: 1px solid var(--border);
   }
+  /* 电脑上页头固定在顶部，半透明 + 模糊；手机上不固定，省出屏幕高度 */
+  @media (min-width: 641px) {
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: saturate(1.4) blur(10px);
+      -webkit-backdrop-filter: saturate(1.4) blur(10px);
+    }
+    .bar {
+      height: var(--header-h);
+      flex-wrap: nowrap;
+      padding-block: 0;
+    }
+  }
   .bar {
-    width: min(100% - 2.5rem, calc(var(--measure) + 8rem));
-    margin-inline: auto;
+    width: 100%;
+    padding-inline: 1.25rem;
     display: flex;
     align-items: center;
     gap: 1rem 1.5rem;

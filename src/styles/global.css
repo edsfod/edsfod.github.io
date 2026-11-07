@@ -4,10 +4,13 @@
     'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Consolas, 'Sarasa Mono SC', monospace;
 
-  --fs-base: 1.0625rem; /* 17px */
-  --lh-body: 1.8;
-  --measure: 42rem; /* 正文栏宽：约 40 个汉字 */
-  --toc-width: 15rem;
+  --fs-base: 1rem; /* 16px */
+  --lh-body: 1.75;
+  --measure: 40rem; /* 窄屏单栏时的正文宽度 */
+  --content-max: 52rem; /* 电脑上正文最大宽度：侧栏折叠后正文向两侧扩展，直到这个宽度 */
+  --left-w: 15rem; /* 左侧栏宽度 */
+  --right-w: 14.5rem; /* 右侧栏宽度 */
+  --header-h: 3.25rem; /* 固定页头高度：锚点跳转、侧栏固定位置都要让开它 */
   --gap: 1.5rem;
   --radius: 6px;
 
@@ -52,7 +55,7 @@ html {
   font-size: 100%;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  scroll-padding-top: 1.5rem;
+  scroll-padding-top: calc(var(--header-h) + 1.25rem);
   /* 中西文之间自动留空隙、标点挤压（浏览器支持则生效） */
   text-autospace: normal;
   text-spacing-trim: normal;
@@ -121,10 +124,112 @@ mark {
   white-space: nowrap;
 }
 
-/* ========== 布局 ========== */
+/* ========== 布局：左侧栏 | 正文 | 右侧栏（电脑），窄屏单栏 ========== */
 .container {
   width: min(100% - 2.5rem, var(--measure));
   margin-inline: auto;
+}
+
+.sidebar,
+.rail {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .shell {
+    display: grid;
+    grid-template-columns: var(--left-w) minmax(0, 1fr) 0;
+    transition: grid-template-columns 0.2s ease;
+  }
+  .shell.has-right {
+    grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
+  }
+  :root[data-left='closed'] .shell {
+    --left-w: 0px;
+  }
+  :root[data-right='closed'] .shell {
+    --right-w: 0px;
+  }
+
+  .container {
+    width: min(100% - 4rem, var(--content-max));
+  }
+
+  .sidebar {
+    display: block;
+    position: sticky;
+    top: var(--header-h);
+    height: calc(100vh - var(--header-h));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.75rem 1.1rem 2rem;
+    scrollbar-width: thin;
+    min-width: 0;
+  }
+  .sidebar-left {
+    border-right: 1px solid var(--border);
+  }
+  .sidebar-right {
+    border-left: 1px solid var(--border);
+  }
+  :root[data-left='closed'] .sidebar-left,
+  :root[data-right='closed'] .sidebar-right {
+    visibility: hidden;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+  }
+
+  .sidebar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--fg-faint);
+  }
+
+  .collapse-btn,
+  .rail {
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--fg-faint);
+    cursor: pointer;
+  }
+  .collapse-btn {
+    display: inline-grid;
+  }
+  .collapse-btn:hover,
+  .rail:hover {
+    background: var(--bg-soft);
+    color: var(--fg);
+  }
+
+  /* 折叠后贴在屏幕边缘的展开按钮 */
+  .rail {
+    position: fixed;
+    top: calc(var(--header-h) + 0.75rem);
+    z-index: 40;
+    border-color: var(--border);
+    background: var(--bg);
+  }
+  .rail-left {
+    left: 0.75rem;
+  }
+  .rail-right {
+    right: 0.75rem;
+  }
+  :root[data-left='closed'] .rail-left,
+  :root[data-right='closed'] .rail-right {
+    display: grid;
+  }
 }
 
 .skip-link {
@@ -141,7 +246,7 @@ mark {
 
 main {
   min-height: 70vh;
-  padding-block: 2rem 4rem;
+  padding-block: 1.5rem 3rem;
 }
 
 /* ========== 通用小部件 ========== */
@@ -166,7 +271,7 @@ main {
 }
 
 .page-title {
-  font-size: 1.75rem;
+  font-size: 1.625rem;
   line-height: 1.35;
   margin: 0 0 0.5rem;
 }
@@ -176,17 +281,17 @@ main {
   font-weight: 600;
   letter-spacing: 0.05em;
   color: var(--fg-faint);
-  margin: 2.5rem 0 0.75rem;
+  margin: 2rem 0 0.6rem;
 }
 
 .notice {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   line-height: 1.7;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.9rem;
   border-radius: var(--radius);
   background: var(--bg-soft);
   border-left: 3px solid var(--fg-faint);
-  margin: 1.25rem 0;
+  margin: 0.75rem 0;
 }
 .notice--ai {
   border-left-color: var(--accent);
@@ -212,23 +317,23 @@ main {
 .prose pre,
 .prose figure,
 .prose .math-display {
-  margin: 0 0 1.25em;
+  margin: 0 0 1em;
 }
 .prose h2,
 .prose h3,
 .prose h4 {
   line-height: 1.4;
-  margin: 2em 0 0.75em;
+  margin: 1.75em 0 0.6em;
   text-align: start;
   position: relative;
 }
 .prose h2 {
-  font-size: 1.375rem;
+  font-size: 1.3rem;
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--border);
 }
 .prose h3 {
-  font-size: 1.1875rem;
+  font-size: 1.125rem;
 }
 .prose h4 {
   font-size: 1.0625rem;
@@ -380,7 +485,7 @@ main {
 
 @media (max-width: 640px) {
   :root {
-    --fs-base: 1rem;
+    --fs-base: 0.9375rem;
   }
   .page-title {
     font-size: 1.5rem;
@@ -401,6 +506,8 @@ main {
   header.site-header,
   footer.site-footer,
   .toc,
+  .sidebar,
+  .rail,
   .comments,
   .copy-btn {
     display: none !important;

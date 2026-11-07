@@ -3,7 +3,9 @@ import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Search from '../components/Search.astro';
+import LeftNav from '../components/LeftNav.astro';
 import { site } from '../site.config';
+import { t } from '../i18n/ui';
 
 interface Props {
   title?: string;
@@ -17,6 +19,7 @@ interface Props {
 const { title, description = site.description, type = 'website', published, updated, noindex = false } = Astro.props;
 const fullTitle = title ? `${title} | ${site.title}` : site.title;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+const hasRight = Astro.slots.has('right');
 ---
 
 <!doctype html>
@@ -46,12 +49,17 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="theme-color" content="#fdfdfc" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#16181c" media="(prefers-color-scheme: dark)" />
 
-    <!-- 在首次绘制前确定主题，避免闪白 -->
+    <!-- 首次绘制前确定主题、侧栏折叠状态、目录详细程度，避免闪烁 -->
     <script is:inline>
       (() => {
-        const saved = localStorage.getItem('theme');
-        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        const d = document.documentElement.dataset;
+        const ls = localStorage;
+        const saved = ls.getItem('theme');
+        d.theme = (saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        // 窗口较窄时左栏默认折叠；手动操作过则记住
+        d.left = ls.getItem('sidebarLeft') ?? (innerWidth < 1280 ? 'closed' : 'open');
+        d.right = ls.getItem('sidebarRight') ?? 'open';
+        d.toc = ls.getItem('tocLevel') ?? '3';
       })();
     </script>
     <slot name="head" />
@@ -59,28 +67,91 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <body>
     <a class="skip-link" href="#main">跳到正文</a>
     <Header />
-    <main id="main">
-      <slot />
-    </main>
-    <Footer />
+
+    <div class:list={['shell', { 'has-right': hasRight }]}>
+      <aside class="sidebar sidebar-left" aria-label="站点导航">
+        <div class="sidebar-head">
+          <span>导航</span>
+          <button type="button" class="collapse-btn" data-sidebar-toggle="left" title="折叠左侧栏（[）" aria-label="折叠左侧栏">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+        </div>
+        <LeftNav />
+      </aside>
+
+      <div class="main-col">
+        <main id="main">
+          <slot />
+        </main>
+        <Footer />
+      </div>
+
+      {
+        hasRight && (
+          <aside class="sidebar sidebar-right" aria-label={t['post.toc']}>
+            <div class="sidebar-head">
+              <button type="button" class="collapse-btn" data-sidebar-toggle="right" title="折叠右侧栏（]）" aria-label="折叠右侧栏">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <span>{t['post.toc']}</span>
+            </div>
+            <slot name="right" />
+          </aside>
+        )
+      }
+    </div>
+
+    <!-- 侧栏折叠后留在屏幕边缘的展开按钮 -->
+    <button type="button" class="rail rail-left" data-sidebar-toggle="left" title="展开左侧栏（[）" aria-label="展开左侧栏">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+    </button>
+    {
+      hasRight && (
+        <button type="button" class="rail rail-right" data-sidebar-toggle="right" title="展开目录（]）" aria-label="展开目录">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M4 6h10M4 12h16M4 18h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+      )
+    }
+
     <Search />
 
     <script>
-      // 主题切换
-      const KEY = 'theme';
       const root = document.documentElement;
+
+      // 主题切换
       const apply = (theme: 'light' | 'dark') => {
         root.dataset.theme = theme;
         window.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
       };
       document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
         const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
-        localStorage.setItem(KEY, next);
+        localStorage.setItem('theme', next);
         apply(next);
       });
-      // 未手动选择时跟随系统
       matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        if (!localStorage.getItem(KEY)) apply(e.matches ? 'dark' : 'light');
+        if (!localStorage.getItem('theme')) apply(e.matches ? 'dark' : 'light');
+      });
+
+      // 侧栏折叠：按钮或 [ / ] 快捷键，状态记在 localStorage
+      const toggle = (side: 'left' | 'right') => {
+        const key = side === 'left' ? 'left' : 'right';
+        const next = root.dataset[key] === 'closed' ? 'open' : 'closed';
+        root.dataset[key] = next;
+        localStorage.setItem(side === 'left' ? 'sidebarLeft' : 'sidebarRight', next);
+      };
+      document.querySelectorAll<HTMLElement>('[data-sidebar-toggle]').forEach((b) =>
+        b.addEventListener('click', () => toggle(b.dataset.sidebarToggle as 'left' | 'right')),
+      );
+      document.addEventListener('keydown', (e) => {
+        const el = document.activeElement as HTMLElement | null;
+        if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key === '[') toggle('left');
+        else if (e.key === ']' && document.querySelector('.sidebar-right')) toggle('right');
       });
     </script>
   </body>

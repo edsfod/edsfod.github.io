@@ -1,0 +1,172 @@
+---
+// 左侧栏：站点导航（本专栏章节 / 全部文章按年份 / 专栏）
+import { getCollection } from 'astro:content';
+import { getPosts, postsInSeries, yearOf, type Post } from '../lib/posts';
+import { t } from '../i18n/ui';
+
+const path = Astro.url.pathname;
+const posts = await getPosts();
+const current = posts.find((p) => path === `/posts/${p.id}/`);
+const allSeries = (await getCollection('series')).filter((s) => postsInSeries(posts, s.id).length > 0);
+const currentSeries = current?.data.series ? allSeries.find((s) => s.id === current.data.series!.id) : undefined;
+const seriesPosts = currentSeries ? postsInSeries(posts, currentSeries.id) : [];
+
+const years = new Map<string, Post[]>();
+for (const p of posts) {
+  const y = yearOf(p.data.published);
+  years.set(y, [...(years.get(y) ?? []), p]);
+}
+const openYear = current ? yearOf(current.data.published) : [...years.keys()][0];
+const isCurrent = (href: string) => path === href;
+---
+
+<nav class="left-nav" aria-label="站点导航">
+  {
+    currentSeries && (
+      <section>
+        <h2 class="nav-title">
+          <a href={`/series/${currentSeries.id}/`}>{currentSeries.data.title}</a>
+        </h2>
+        <ol class="chapters">
+          {seriesPosts.map((p, i) => (
+            <li>
+              <a href={`/posts/${p.id}/`} aria-current={isCurrent(`/posts/${p.id}/`) ? 'page' : undefined}>
+                <span class="num">{p.data.order ?? i + 1}</span>
+                <span>{p.data.title}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )
+  }
+
+  <section>
+    <h2 class="nav-title"><a href="/archive/">{t['nav.archive']}</a></h2>
+    {posts.length === 0 && <p class="empty">{t['home.empty']}</p>}
+    {
+      [...years].map(([year, list]) => (
+        <details open={year === openYear}>
+          <summary>
+            {year} <span class="count">{list.length}</span>
+          </summary>
+          <ul>
+            {list.map((p) => (
+              <li>
+                <a href={`/posts/${p.id}/`} aria-current={isCurrent(`/posts/${p.id}/`) ? 'page' : undefined} title={p.data.title}>
+                  {p.data.title}
+                  {p.data.ai && <span class="badge">AI</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ))
+    }
+  </section>
+
+  {
+    allSeries.length > 0 && (
+      <section>
+        <h2 class="nav-title">
+          <a href="/series/">{t['nav.series']}</a>
+        </h2>
+        <ul>
+          {allSeries.map((s) => (
+            <li>
+              <a href={`/series/${s.id}/`} aria-current={isCurrent(`/series/${s.id}/`) ? 'page' : undefined}>
+                {s.data.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  <section>
+    <ul>
+      <li><a href="/tags/" aria-current={isCurrent('/tags/') ? 'page' : undefined}>{t['nav.tags']}</a></li>
+      <li><a href="/about/" aria-current={isCurrent('/about/') ? 'page' : undefined}>{t['nav.about']}</a></li>
+    </ul>
+  </section>
+</nav>
+
+<style>
+  .left-nav {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  section + section {
+    margin-top: 1.25rem;
+  }
+  .nav-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--fg-faint);
+    margin: 0 0 0.35rem;
+  }
+  .nav-title a {
+    color: inherit;
+  }
+  ul,
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    padding: 0.2rem 0.5rem;
+    margin-inline: -0.5rem;
+    border-radius: 4px;
+    color: var(--fg-soft);
+    overflow: hidden;
+  }
+  li a:hover {
+    background: var(--bg-soft);
+    color: var(--fg);
+    text-decoration: none;
+  }
+  li a[aria-current='page'] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .num {
+    flex: none;
+    min-width: 1.2em;
+    text-align: right;
+    color: var(--fg-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  details ul {
+    margin: 0.15rem 0 0.4rem 0.75rem;
+  }
+  summary {
+    cursor: pointer;
+    color: var(--fg-soft);
+    padding: 0.15rem 0;
+    user-select: none;
+  }
+  summary:hover {
+    color: var(--fg);
+  }
+  .count,
+  .empty {
+    color: var(--fg-faint);
+    font-size: 0.75rem;
+  }
+  .badge {
+    flex: none;
+    margin-left: auto;
+    font-size: 0.625rem;
+    padding: 0 0.3em;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--fg-faint);
+  }
+</style>

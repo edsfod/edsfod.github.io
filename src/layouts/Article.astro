@@ -32,10 +32,31 @@ const post = isPost ? (entry as Post).data : undefined;
 const updated = updatedOf(entry);
 const ai = data.ai;
 const models = ai?.model ? [ai.model].flat().join('、') : undefined;
+const tocHeadings = headings.filter((h) => h.depth >= 2 && h.depth <= 4 && h.slug !== 'footnote-label');
 ---
 
 <Base title={data.title} description={data.description} type="article" published={data.published} updated={updated}>
-  <div class="article-grid">
+  {
+    tocHeadings.length > 0 && (
+      <Fragment slot="right">
+        <Toc headings={headings} />
+        <div class="sidebar-foot">
+          <div class="progress" aria-hidden="true">
+            <span data-progress-bar />
+          </div>
+          <div class="foot-row">
+            <span class="meta" data-progress-text>
+              0%
+            </span>
+            <button type="button" class="to-top" data-to-top>
+              ↑ {t['toTop']}
+            </button>
+          </div>
+        </div>
+      </Fragment>
+    )
+  }
+  <div class="container article">
     <header class="head" data-pagefind-body>
       {
         series && (
@@ -94,12 +115,9 @@ const models = ai?.model ? [ai.model].flat().join('、') : undefined;
       }
     </header>
 
-    <aside class="toc-col" data-pagefind-ignore>
-      <div class="toc-sticky">
-        <Toc headings={headings} />
-        <button type="button" class="to-top" data-to-top hidden>↑ {t['toTop']}</button>
-      </div>
-    </aside>
+    <div class="toc-inline" data-pagefind-ignore>
+      <Toc headings={headings} variant="inline" />
+    </div>
 
     <div class="body">
       <div class="prose" data-pagefind-body>
@@ -188,14 +206,21 @@ const models = ai?.model ? [ai.model].flat().join('、') : undefined;
     h.appendChild(a);
   });
 
-  // 回到顶部：向下滚动超过一屏后出现
-  const toTop = document.querySelector<HTMLButtonElement>('[data-to-top]');
-  if (toTop) {
-    const sync = () => (toTop.hidden = scrollY < innerHeight);
+  // 阅读进度与回到顶部（右侧栏底部）
+  const bar = document.querySelector<HTMLElement>('[data-progress-bar]');
+  const text = document.querySelector<HTMLElement>('[data-progress-text]');
+  if (bar && text) {
+    const sync = () => {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      const pct = max > 0 ? Math.min(100, Math.round((scrollY / max) * 100)) : 100;
+      bar.style.width = `${pct}%`;
+      text.textContent = `已读 ${pct}%`;
+    };
     addEventListener('scroll', sync, { passive: true });
+    addEventListener('resize', sync);
     sync();
-    toTop.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
   }
+  document.querySelector('[data-to-top]')?.addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
 
   // 代码块复制按钮
   document.querySelectorAll<HTMLPreElement>('.prose pre').forEach((pre) => {
@@ -213,69 +238,63 @@ const models = ai?.model ? [ai.model].flat().join('、') : undefined;
 </script>
 
 <style>
-  .article-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'head' 'toc' 'body';
-    width: min(100% - 2.5rem, var(--measure));
-    margin-inline: auto;
-  }
   .head {
-    grid-area: head;
-    margin-bottom: 1.5rem;
-  }
-  .toc-col {
-    grid-area: toc;
-  }
-  .toc-col :global(.toc) {
-    margin-bottom: 1.5rem;
-  }
-  .to-top {
-    display: none;
+    margin-bottom: 1.25rem;
   }
   .body {
-    grid-area: body;
     min-width: 0;
   }
-  /* 电脑（主要阅读场景）：正文居中，目录与“回到顶部”固定在右侧留白里 */
+  /* 窄屏：目录折叠在正文上方；电脑：目录在右侧栏，这里隐藏 */
+  .toc-inline :global(.toc) {
+    margin-bottom: 1.25rem;
+  }
   @media (min-width: 1100px) {
-    .article-grid {
-      width: 100%;
-      grid-template-columns: 1fr minmax(0, var(--measure)) 1fr;
-      grid-template-areas: '. head .' '. body toc';
-      column-gap: 2.5rem;
-    }
-    .toc-sticky {
-      position: sticky;
-      top: 2rem;
-      max-width: var(--toc-width);
-      max-height: calc(100vh - 4rem);
-      overflow-y: auto;
-    }
-    .to-top {
-      display: block;
-      margin-top: 0.5rem;
-      padding: 0;
-      border: 0;
-      background: none;
-      font: inherit;
-      font-size: 0.875rem;
-      color: var(--fg-faint);
-      cursor: pointer;
-    }
-    .to-top:hover {
-      color: var(--accent);
-    }
-    .to-top[hidden] {
+    .toc-inline {
       display: none;
     }
-    .toc-col :global(summary) {
-      pointer-events: none;
-      list-style: none;
-    }
-    .toc-col :global(summary::-webkit-details-marker) {
-      display: none;
-    }
+  }
+  /* 右侧栏底部：阅读进度与回到顶部 */
+  .sidebar-foot {
+    position: sticky;
+    bottom: 0;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .progress {
+    height: 3px;
+    border-radius: 2px;
+    background: var(--bg-soft);
+    overflow: hidden;
+  }
+  .progress span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--accent);
+  }
+  .foot-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.4rem;
+  }
+  .foot-row .meta {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .to-top {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.8125rem;
+    color: var(--fg-faint);
+    cursor: pointer;
+  }
+  .to-top:hover {
+    color: var(--accent);
   }
   .series-banner {
     margin: 0 0 0.5rem;

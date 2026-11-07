@@ -1,41 +1,107 @@
 ---
+// 目录：收录 ## ~ ####，按 <html data-toc="2|3|4"> 显示到相应层级（详细程度可切换并记住）
 import type { MarkdownHeading } from 'astro';
 import { t } from '../i18n/ui';
 
 interface Props {
   headings: MarkdownHeading[];
+  /** sidebar：右侧栏，带详细程度切换；inline：窄屏时放在正文上方 */
+  variant?: 'sidebar' | 'inline';
 }
-const headings = Astro.props.headings.filter((h) => h.depth >= 2 && h.depth <= 3 && h.slug !== 'footnote-label');
+const { variant = 'sidebar' } = Astro.props;
+const headings = Astro.props.headings.filter((h) => h.depth >= 2 && h.depth <= 4 && h.slug !== 'footnote-label');
+const maxDepth = Math.max(2, ...headings.map((h) => h.depth));
+const levels = [
+  { depth: 2, label: '简略' },
+  { depth: 3, label: '标准' },
+  { depth: 4, label: '详细' },
+].filter((l) => l.depth <= maxDepth);
 ---
 
 {
-  headings.length >= 2 && (
-    <nav class="toc" aria-label={t['post.toc']}>
-      <details open>
-        <summary>{t['post.toc']}</summary>
-        <ol>
-          {headings.map((h) => (
-            <li class={`d${h.depth}`}>
-              <a href={`#${h.slug}`}>{h.text}</a>
-            </li>
-          ))}
-        </ol>
-      </details>
+  headings.length > 0 && (
+    <nav class:list={['toc', variant]} aria-label={t['post.toc']}>
+      {variant === 'sidebar' ? (
+        <>
+          {levels.length > 1 && (
+            <div class="levels" role="radiogroup" aria-label="目录详细程度">
+              {levels.map((l) => (
+                <button type="button" role="radio" data-toc-level={l.depth} title={`显示到 ${'#'.repeat(l.depth)} 级标题`}>
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <ol>
+            {headings.map((h) => (
+              <li class={`d${h.depth}`}>
+                <a href={`#${h.slug}`}>{h.text}</a>
+              </li>
+            ))}
+          </ol>
+        </>
+      ) : (
+        <details>
+          <summary>{t['post.toc']}</summary>
+          <ol>
+            {headings.map((h) => (
+              <li class={`d${h.depth}`}>
+                <a href={`#${h.slug}`}>{h.text}</a>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
     </nav>
   )
 }
 
 <script>
-  // 高亮当前阅读到的章节
-  const links = new Map<string, HTMLAnchorElement>();
-  document.querySelectorAll<HTMLAnchorElement>('.toc a').forEach((a) => links.set(decodeURIComponent(a.hash.slice(1)), a));
-  if (links.size) {
-    const headings = [...links.keys()].map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+  const root = document.documentElement;
+
+  // 详细程度切换
+  const syncLevel = () => {
+    const level = root.dataset.toc ?? '3';
+    document.querySelectorAll<HTMLButtonElement>('[data-toc-level]').forEach((b) => {
+      b.setAttribute('aria-checked', String(b.dataset.tocLevel === level));
+    });
+  };
+  document.querySelectorAll<HTMLButtonElement>('[data-toc-level]').forEach((b) =>
+    b.addEventListener('click', () => {
+      root.dataset.toc = b.dataset.tocLevel!;
+      localStorage.setItem('tocLevel', b.dataset.tocLevel!);
+      syncLevel();
+    }),
+  );
+  syncLevel();
+
+  // 高亮当前阅读到的章节（各层级都会高亮，隐藏层级时其上级仍高亮）
+  const anchors = [...document.querySelectorAll<HTMLAnchorElement>('.toc a')];
+  const ids = [...new Set(anchors.map((a) => decodeURIComponent(a.hash.slice(1))))];
+  const headings = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+  if (headings.length) {
+    const depthOf = (h: HTMLElement) => Number(h.tagName.slice(1));
     const update = () => {
-      let current = headings[0];
-      for (const h of headings) if (h.getBoundingClientRect().top < 120) current = h;
-      links.forEach((a) => a.removeAttribute('aria-current'));
-      links.get(current.id)?.setAttribute('aria-current', 'true');
+      let idx = 0;
+      headings.forEach((h, i) => {
+        if (h.getBoundingClientRect().top < 120) idx = i;
+      });
+      // 当前标题及其各级祖先
+      const active = new Set<string>();
+      let depth = 99;
+      for (let i = idx; i >= 0; i--) {
+        const d = depthOf(headings[i]);
+        if (d < depth) {
+          active.add(headings[i].id);
+          depth = d;
+        }
+      }
+      anchors.forEach((a) => {
+        const id = decodeURIComponent(a.hash.slice(1));
+        if (id === headings[idx].id) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+        a.classList.toggle('ancestor', active.has(id) && id !== headings[idx].id);
+      });
     };
     addEventListener('scroll', update, { passive: true });
     update();
@@ -44,14 +110,8 @@ const headings = Astro.props.headings.filter((h) => h.depth >= 2 && h.depth <= 3
 
 <style>
   .toc {
-    font-size: 0.875rem;
-    line-height: 1.6;
-  }
-  summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--fg-soft);
-    margin-bottom: 0.4rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
   }
   ol {
     list-style: none;
@@ -59,24 +119,70 @@ const headings = Astro.props.headings.filter((h) => h.depth >= 2 && h.depth <= 3
     padding: 0;
   }
   li {
-    padding: 0.15rem 0;
+    padding: 0.1rem 0;
   }
   .d3 {
-    padding-left: 1em;
+    padding-left: 0.9em;
+  }
+  .d4 {
+    padding-left: 1.8em;
+    font-size: 0.95em;
+  }
+  /* 按详细程度隐藏更深的层级 */
+  :global(:root[data-toc='2']) .sidebar :is(.d3, .d4),
+  :global(:root[data-toc='3']) .sidebar .d4 {
+    display: none;
   }
   a {
     display: block;
     color: var(--fg-soft);
     border-left: 2px solid transparent;
     padding-left: 0.6rem;
-    margin-left: -0.6rem;
   }
   a:hover {
     color: var(--fg);
     text-decoration: none;
   }
+  a.ancestor {
+    color: var(--fg);
+  }
   a[aria-current='true'] {
     color: var(--accent);
     border-left-color: var(--accent);
+  }
+  /* 隐藏层级里的当前标题不可见时，让其上级显示强调色 */
+  :global(:root[data-toc='2']) .sidebar .d2 a.ancestor,
+  :global(:root[data-toc='3']) .sidebar :is(.d2, .d3) a.ancestor {
+    border-left-color: var(--border);
+  }
+  .levels {
+    display: inline-flex;
+    margin-bottom: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .levels button {
+    font: inherit;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.6rem;
+    border: 0;
+    background: transparent;
+    color: var(--fg-soft);
+    cursor: pointer;
+  }
+  .levels button + button {
+    border-left: 1px solid var(--border);
+  }
+  .levels button[aria-checked='true'] {
+    background: var(--bg-soft);
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .inline summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--fg-soft);
+    margin-bottom: 0.4rem;
   }
 </style>
